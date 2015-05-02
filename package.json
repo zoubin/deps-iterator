@@ -1,0 +1,28 @@
+{
+  "name": "deps-iterator",
+  "version": "0.1.0",
+  "description": "Iterator for walking dependency graph",
+  "main": "index.js",
+  "scripts": {
+    "test": "node_modules/mocha/bin/mocha test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zoubin/deps-iterator.git"
+  },
+  "keywords": [
+    "dependency",
+    "graph",
+    "cycle"
+  ],
+  "author": "zoubin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zoubin/deps-iterator/issues"
+  },
+  "homepage": "https://github.com/zoubin/deps-iterator",
+  "dependencies": {
+    "mocha": "^2.2.4",
+    "tree-iterator": "^0.1.0"
+  }
+}
