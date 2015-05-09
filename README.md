@@ -18,6 +18,11 @@ var iter = Deps(records, opts);
 
 * `iter`: `Iterable` used to walk the dependency graph
 
+### for (var node of iter)
+
+### iter.on('cycle', cb)
+See example below.
+
 ## Examples
 
 **for..of keepDepsOrder:false**
@@ -89,5 +94,46 @@ ordered:
   { id: 2, deps: [ 3 ] },
   { id: 0, deps: [ 1, 2 ] },
   { id: 4, deps: [ 5, 3 ] } ]
+
+```
+
+**.on('cycle', cb)**
+
+```javascript
+var Deps = require('deps-iterator');
+var records = [
+    { id: 0, deps: [1] },
+    { id: 1, deps: [2] },
+    { id: 2, deps: [0, 3] },
+    { id: 3, deps: [4] },
+    { id: 4, deps: [2] },
+    { id: 5, deps: [3] }
+];
+var iter = Deps(records, { keepDepsOrder: false });
+iter.on('cycle', function (cycle) {
+    console.log('cycle:', cycle);
+});
+var ordered = [];
+for (var node of iter) {
+    ordered.push(node);
+}
+console.log('ordered:');
+console.log(ordered);
+
+```
+
+output:
+
+```
+⌘ node examples/cycle.js
+ordered:
+[ { id: 4, deps: [ 2 ] },
+  { id: 3, deps: [ 4 ] },
+  { id: 2, deps: [ 0, 3 ] },
+  { id: 1, deps: [ 2 ] },
+  { id: 0, deps: [ 1 ] },
+  { id: 5, deps: [ 3 ] } ]
+cycle: [ '0', '1', '2', '0' ]
+cycle: [ '2', '3', '4', '2' ]
 
 ```
