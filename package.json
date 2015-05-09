@@ -4,7 +4,7 @@
   "description": "Iterator for walking dependency graph",
   "main": "index.js",
   "scripts": {
-    "test": "node_modules/mocha/bin/mocha test/*.js"
+    "test": "tape test/*.js | faucet"
   },
   "repository": {
     "type": "git",
@@ -22,7 +22,10 @@
   },
   "homepage": "https://github.com/zoubin/deps-iterator",
   "dependencies": {
-    "mocha": "^2.2.4",
-    "tree-iterator": "^0.1.0"
+    "tree-iterator": "^0.2.0"
+  },
+  "devDependencies": {
+    "faucet": "0.0.1",
+    "tape": "^4.0.0"
   }
 }

@@ -1,4 +1,7 @@
-var TreeWalker = require('tree-iterator').postOrder;
+var TreeIterator = require('tree-iterator');
+var inherits = require('util').inherits;
+var EventEmitter = require('events').EventEmitter;
+inherits(DepsIterator, EventEmitter);
 
 module.exports = DepsIterator;
 
@@ -6,15 +9,17 @@ function DepsIterator(records, opts) {
     if (!(this instanceof DepsIterator)) {
         return new DepsIterator(records, opts);
     }
-    opts = opts || {};
-    opts.key = opts.key || 'id';
-    opts.deps = opts.deps || 'deps';
+    opts = xtend({
+        key: 'id',
+        deps: 'deps',
+        keepDepsOrder: true
+    }, opts);
 
-    var self = this;
     this.graph = {};
     this.invalid = [];
     this.map = {};
     this.entries = [];
+    var self = this;
     records.forEach(function (rec) {
         var key = valid(rec[opts.key]);
         if (!key) {
@@ -23,69 +28,49 @@ function DepsIterator(records, opts) {
         }
         self.map[key] = rec;
         var deps = rec[opts.deps];
-        self.graph[key] = deps && deps.map(valid).filter(Boolean) || [];
+        deps = deps && deps.map(valid).filter(Boolean) || [];
+        self.graph[key] = (self.graph[key] || []).concat(deps);
+        if (deps.length && opts.keepDepsOrder) {
+            // deps order
+            deps.reduce(function (d, k) {
+                self.graph[k] = self.graph[k] || [];
+                self.graph[k].push(d);
+                return k;
+            });
+        }
         self.entries.push(key);
     });
-    this.visited = {};
+    Object.keys(this.graph).forEach(function (key) {
+        self.graph[key] = Object.keys(self.graph[key].reduce(function (o, k) {
+            o[k] = true;
+            return o;
+        }, {}));
+    });
+    this.visited = opts.visited;
 }
 
-DepsIterator.prototype.next = function() {
-    if (this.invalid.length) {
-        return {
-            done: false,
-            value: this.invalid.shift()
-        };
-    }
-    if (this.returned) {
-        return this.returned;
-    }
-    var walker = this.getTreeWalker();
-    if (!walker) {
-        return this.return();
-    }
-    var res = walker.next();
-    if (!res.error) {
-        if (!this.map[res.value]) {
-            return this.next();
-        }
-        res.value = this.map[res.value];
-    }
-    return res;
-};
+DepsIterator.prototype[Symbol.iterator] = function *() {
+    var visited = this.visited || {};
+    var entries = this.entries;
 
-DepsIterator.prototype.return = function (v) {
-    this.returned = { done: true, value: v };
-    return this.returned;
-};
+    yield * this.invalid;
 
-DepsIterator.prototype.throw = function (err) {
-    if (typeof err === 'string') {
-        err = new Error(err);
-    }
-    if (!(err instanceof Error)) {
-        err = new Error('error throwed');
-    }
-    throw err;
-};
-
-DepsIterator.prototype.getTreeWalker = function() {
-    var self = this;
-    if (!this.walker || this.walker.returned) {
-        var root;
-        while (this.entries.length) {
-            root = this.entries.shift();
-            if (!this.visited[root]) {
-                break;
+    for (var i = 0, len = entries.length; i < len; i++) {
+        var iter = this.getTreeIterator(entries[i], visited);
+        iter.on('cycle', this.emit.bind(this, 'cycle'));
+        for (var n of iter) {
+            if (this.map[n]) {
+                yield this.map[n];
             }
         }
-        if (typeof root === 'undefined' || this.visited[root]) {
-            return null;
-        }
-        this.walker = TreeWalker(root, function (id) {
-            return self.graph[id];
-        }, this.visited);
     }
-    return this.walker.returned ? null : this.walker;
+};
+
+DepsIterator.prototype.getTreeIterator = function(entry, visited) {
+    var self = this;
+    return TreeIterator(entry, function (node) {
+        return self.graph[node];
+    }, visited);
 };
 
 function valid(k) {
@@ -93,4 +78,21 @@ function valid(k) {
         return !isNaN(k) && ('' + k);
     }
     return typeof k === 'string' && k;
+}
+
+function xtend() {
+    var ret = {};
+    var args = [].filter.call(arguments, propertier);
+    for (var i = 0, len = args.length; i < len; i++) {
+        for (var k in args[i]) {
+            if (args[i].hasOwnProperty(k)) {
+                ret[k] = args[i][k];
+            }
+        }
+    }
+    return ret;
+}
+
+function propertier(o) {
+    return o !== null && typeof o !== 'undefined';
 }
