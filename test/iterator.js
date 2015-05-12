@@ -175,6 +175,21 @@ test('2 roots, 2 cycles', function (t) {
     });
     var ordered = walk(iter);
 });
+test('.deps is Function', function (t) {
+    var records = [
+        { id: 0, deps: { 1: true, 2: true } },
+        { id: 1, deps: {} },
+        { id: 2, deps: {} }
+    ];
+    var iter = Deps(records, { deps: function (rec) { return Object.keys(rec.deps); } });
+    var ordered = walk(iter);
+    t.deepEqual(ordered, [
+        { id: 1, deps: {} },
+        { id: 2, deps: {} },
+        { id: 0, deps: { 1: true, 2: true } }
+    ]);
+    t.end();
+});
 
 function walk(iter) {
     var ordered = [];

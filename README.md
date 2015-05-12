@@ -12,8 +12,8 @@ var iter = Deps(records, opts);
 * `records`: *Array*. Each element contains a node and its dependencies.
 * `opts`: *Object*. Optional.
 
-    * `key`: which field of the record is the key. ('id')
-    * `deps`: which field of the record contains the deps. ('deps')
+    * `key`: *String*. way to get the key. ('id')
+    * `deps`: *String* | *Function*. way to get the deps. ('deps')
     * `keepDepsOrder`: *Boolean*. If `true`, the order of `deps` matters.(true)
 
 * `iter`: `Iterable` used to walk the dependency graph
@@ -135,5 +135,51 @@ ordered:
   { id: 5, deps: [ 3 ] } ]
 cycle: [ '0', '1', '2', '0' ]
 cycle: [ '2', '3', '4', '2' ]
+
+```
+
+**various deps**
+
+```javascript
+var JSONStream = require('JSONStream');
+var rs = require('stream').Readable({ objectMode: true });
+
+var Deps = require('..');
+var records = [
+    {
+        id: './entry.css',
+        deps: {
+            './deps/a.css': '/Users/zoubin/example/deps/a.css',
+            './deps/b.css': '/Users/zoubin/example/deps/b.css'
+        }
+    },
+    { id: '/Users/zoubin/example/deps/b.css', deps: {} },
+    { id: '/Users/zoubin/example/deps/a.css', deps: {} }
+];
+var iter = Deps(records, {
+    deps: function (rec) {
+        return Object.keys(rec.deps).map(function (d) { return rec.deps[d]; });
+    }
+});
+
+for (var node of iter) {
+    rs.push(node);
+}
+rs.push(null);
+rs.pipe(JSONStream.stringify()).pipe(process.stdout);
+
+```
+
+output:
+
+```
+⌘ node examples/deps.js
+[
+{"id":"/Users/zoubin/example/deps/a.css","deps":{}}
+,
+{"id":"/Users/zoubin/example/deps/b.css","deps":{}}
+,
+{"id":"./entry.css","deps":{"./deps/a.css":"/Users/zoubin/example/deps/a.css","./deps/b.css":"/Users/zoubin/example/deps/b.css"}}
+]
 
 ```

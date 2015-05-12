@@ -9,11 +9,8 @@ function DepsIterator(records, opts) {
     if (!(this instanceof DepsIterator)) {
         return new DepsIterator(records, opts);
     }
-    opts = xtend({
-        key: 'id',
-        deps: 'deps',
-        keepDepsOrder: true
-    }, opts);
+
+    opts = defaultOpts(opts);
 
     this.graph = {};
     this.invalid = [];
@@ -27,7 +24,7 @@ function DepsIterator(records, opts) {
             return;
         }
         self.map[key] = rec;
-        var deps = rec[opts.deps];
+        var deps = opts.deps(rec);
         deps = deps && deps.map(valid).filter(Boolean) || [];
         self.graph[key] = (self.graph[key] || []).concat(deps);
         if (deps.length && opts.keepDepsOrder) {
@@ -95,4 +92,20 @@ function xtend() {
 
 function propertier(o) {
     return o !== null && typeof o !== 'undefined';
+}
+
+function defaultOpts(opts) {
+    opts = xtend({
+        key: 'id',
+        deps: 'deps',
+        keepDepsOrder: true
+    }, opts);
+
+    if (typeof opts.deps !== 'function') {
+        var deps = opts.deps;
+        opts.deps = function (rec) {
+            return rec[deps];
+        };
+    }
+    return opts;
 }
